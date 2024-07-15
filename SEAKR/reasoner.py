@@ -117,7 +117,7 @@ class MultiHopReasoner:
         token_doc = nlp(token.strip())
         return all(t_w.is_punct for t_w in token_doc)
     
-    def _restruct_tokens(self, step: Step):
+    def _restruct_tokens(self, step: Step): # Query Formulation (Follows FLARE)
         sentences = [sent.text.strip() for sent in nlp(step.content).sents]
         logprob_list: List[Logprob] = [list(one_token_dict.values())[0] for one_token_dict in step.logprobs]
 
