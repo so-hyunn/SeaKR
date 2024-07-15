@@ -717,29 +717,33 @@ class LLMEngine:
                 self.compute_uncertainty(request_output)
         return request_outputs
     
-    def compute_uncertainty(self, request_output: RequestOutput):
+    def compute_uncertainty(self, request_output: RequestOutput): 
         for cpl_output in request_output.outputs:
             self._compute_single_uncertainty(cpl_output)
         uncertainty_dict = {}
-        if len(request_output.outputs) > 1:
+        if len(request_output.outputs) > 1: 
             valid_embeddings = [getattr(cpl, 'eos_embedding', None) for cpl in request_output.outputs if cpl.text.strip()] # remove empty outputs
             if valid_embeddings:
-                eos_embeddings = torch.stack(valid_embeddings)
-                uncertainty_dict['eigen_score'] = self._compute_eigen_score(eos_embeddings)
+                eos_embeddings = torch.stack(valid_embeddings) 
+                uncertainty_dict['eigen_score'] = self._compute_eigen_score(eos_embeddings) # calculate eigen_score
             all_perplexities = [cpl.uncertainty["perplexity"] for cpl in request_output.outputs if "perplexity" in cpl.uncertainty]
             # print("all_perplexities", all_perplexities)
             if all_perplexities:
                 uncertainty_dict['ln_entropy'] = np.mean(all_perplexities)
-        else:
+        else: 
             uncertainty_dict['perplexity'] = request_output.outputs[0].uncertainty.get('perplexity', 1e3)
             uncertainty_dict['energy_score'] = request_output.outputs[0].uncertainty.get('energy_score', 0)
         setattr(request_output, 'uncertainty', uncertainty_dict)
 
-    def _compute_eigen_score(self, z: torch.tensor):
+    def _compute_eigen_score(self, z: torch.tensor): 
         z = z.to(torch.float32)
         k, d = z.shape
-        j_d = torch.eye(d) - (1/d) * torch.ones(d, d)
+        j_d = torch.eye(d) - (1/d) * torch.ones(d, d) 
+        # torch.eye: return 2D tensors with ones on the diagonal and zeros elsewhere
+        # j_d : remove the mean from the embedding vectors. 
         j_d = j_d.to(z.device)
+        # calculate covariance matrix of j_d
+        # einsum function performs a batch matrix multiplication
         sigma = torch.einsum('ij,jk,kl->il', z, j_d, z.t())
         return ((1/k) * torch.logdet(sigma + self.eigen_alpha * torch.eye(k, device=sigma.device))).item()
     
